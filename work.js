@@ -43,7 +43,7 @@ function updateStats() {
 function filterTasks(status) {
   currentFilter = status;
   const cards = document.querySelectorAll('#card-container .col-md-4');
-  
+
   document.querySelectorAll('.filter-btn').forEach(btn => {
     btn.classList.remove('active');
   });
@@ -111,15 +111,17 @@ function parseGoogleDateString(dateStr) {
   return new Date(year, month, day, hour, minute, second);
 }
 
+// ฟังก์ชันสร้าง PDF
 function generatePDF(rowData, index) {
   const button = event.target;
   const originalText = button.innerHTML;
-  button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> กำลังโหลด...';
+  button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> กำลังสร้าง PDF...';
   button.disabled = true;
 
+  // ดึงข้อมูลจาก rowData
   const [
     timestampRaw, building, floor, department, contact,
-    issue, imgURL, status, detail, equipment, cannotFix, jobType
+    issue, imgURL, status, detail, equipment, cannotFix, jobType, sequence
   ] = rowData.c.map((cell) => (cell ? cell.v : ""));
 
   const timestamp = typeof timestampRaw === "string" && timestampRaw.includes("Date(")
@@ -128,7 +130,7 @@ function generatePDF(rowData, index) {
 
   const { date, time } = formatThaiDateTime(timestamp);
 
-  const pdfTemplateData = {
+  const data = {
     date: date,
     time: time.replace(' น.', ''),
     building: building || '-',
@@ -139,51 +141,78 @@ function generatePDF(rowData, index) {
     detail: detail || '-',
     equipment: equipment || '-',
     cannotFix: cannotFix || '-',
-    jobType: jobType || '-'
+    jobType: jobType || '-',
+    sequence: sequence || index + 1
   };
 
-  const payload = {
-    action: 'generatePDF',
-    rowIndex: index + 2, // index ที่ได้มาเป็น 0-based, ต้อง +2 เพื่อให้เป็นเลขแถวจริงในชีต
-    data: pdfTemplateData
-  };
+  // ใช้ JSONP แทน fetch
+  const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwJkJuQCiM-ofuh_KYkCC7Espw7vksWNKUhvma06w_ocPLjDkcA_7ZAsLum0aSRwK957Q/exec';
 
-  // ***** ส่วนสำคัญอยู่ตรงนี้ *****
-  fetch('https://script.google.com/macros/s/AKfycby1hX-IZqJvi0Vnmf2dsnYjl2U-j_9EzrSQsdbD2kADL54EudnxXZ639FiEY-rtTYHfcw/exec', { // <-- !! ตรวจสอบให้แน่ใจว่าเป็น URL ที่ Deploy ใหม่ล่าสุด !!
-    method: 'POST',
-    body: JSON.stringify(payload),
-    headers: {
-      'Content-Type': 'application/json'
-    },
-  })
-  .then(response => {
-    if (!response.ok) {
-        return response.text().then(text => { throw new Error(`HTTP error! Status: ${response.status}, Message: ${text}`) });
-    }
-    return response.json();
-  })
-  .then(result => {
-    if (result.success) {
-      if (result.isNew) {
-        alert(`✅ สร้าง PDF ใหม่สำเร็จ!\nเลขที่เอกสาร: ${result.documentNumber}`);
+  sendDataWithJSONP(SCRIPT_URL, data)
+    .then(result => {
+      if (result.success) {
+        alert(`✅ สร้าง PDF เรียบร้อย!\nเลขที่เอกสาร: ${result.documentNumber}`);
+
+        // ดาวน์โหลดไฟล์
+        const link = document.createElement('a');
+        link.href = result.downloadUrl;
+        link.download = `ใบแจ้งซ่อม_${result.documentNumber}_${building}_${floor}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
       } else {
-        alert(`✅ พบเอกสารเดิม\nกำลังดาวน์โหลดไฟล์ที่มีอยู่แล้ว...`);
+        alert('❌ เกิดข้อผิดพลาดในการสร้าง PDF: ' + result.error);
       }
-      window.open(result.downloadUrl, '_blank');
-    } else {
-      alert('❌ เกิดข้อผิดพลาดในการสร้าง PDF: ' + result.error);
-      console.error('Error from Google Script:', result.error);
-    }
-  })
-  .catch(error => {
-    console.error('Fetch Error:', error);
-    alert(`❌ เกิดข้อผิดพลาดในการเชื่อมต่อ: ${error.message}\n\nกรุณาตรวจสอบ Log ใน Google Apps Script`);
-  })
-  .finally(() => {
-    button.innerHTML = originalText;
-    button.disabled = false;
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      alert('❌ เกิดข้อผิดพลาดในการเชื่อมต่อ: ' + error.message);
+    })
+    .finally(() => {
+      button.innerHTML = originalText;
+      button.disabled = false;
+    });
+}
+
+// ฟังก์ชันสำหรับ JSONP
+function sendDataWithJSONP(url, data) {
+  return new Promise((resolve, reject) => {
+    const callbackName = 'jsonp_callback_' + Math.round(100000 * Math.random());
+
+    // สร้าง callback function
+    window[callbackName] = function (response) {
+      delete window[callbackName];
+      document.body.removeChild(script);
+      resolve(response);
+    };
+
+    // สร้าง script element
+    const script = document.createElement('script');
+    const params = new URLSearchParams();
+    params.append('callback', callbackName);
+    params.append('data', JSON.stringify(data));
+
+    script.src = url + '?' + params.toString();
+    script.onerror = function () {
+      delete window[callbackName];
+      document.body.removeChild(script);
+      reject(new Error('JSONP request failed'));
+    };
+
+    document.body.appendChild(script);
+
+    // Timeout
+    setTimeout(() => {
+      if (window[callbackName]) {
+        delete window[callbackName];
+        document.body.removeChild(script);
+        reject(new Error('JSONP request timeout'));
+      }
+    }, 30000);
   });
 }
+
 
 // ฟังก์ชันโหลดข้อมูลและสร้างการ์ด
 function loadTasks() {
@@ -201,6 +230,20 @@ function loadTasks() {
 
       allTasksData = rows;
       container.innerHTML = '';
+      
+
+      allTasksData = rows;
+
+      rows.sort((a, b) => {
+        const getDate = (val) => {
+          const raw = val?.c?.[0]?.v;
+          if (typeof raw === "string" && raw.includes("Date(")) {
+            return parseGoogleDateString(raw);
+          }
+          return new Date(raw);
+        };
+        return getDate(b) - getDate(a);
+      });
 
       rows.forEach((row, index) => {
         const [
@@ -240,9 +283,9 @@ function loadTasks() {
         const imageSrc = getImageURL(imgURL);
         const modalId = `modal${index}`;
         const rowIndex = index + 2;
-        
+
         // กำหนดปุ่มตามสถานะ
-        const buttonHTML = displayStatus === "เสร็จสิ้น" 
+        const buttonHTML = displayStatus === "เสร็จสิ้น"
           ? `<button type="button" class="btn btn-success" onclick="generatePDF(allTasksData[${index}], ${index})">
                <i class="fas fa-download"></i> โหลด PDF
              </button>`
@@ -344,7 +387,7 @@ function loadTasks() {
     });
 }
 
-// ฟังก์ชันอื่นๆ ยังคงเหมือนเดิม
+
 function showFormsuccess(index) {
   document.getElementById(`formContainernot${index}`).style.display = 'none';
   document.getElementById(`formContainer${index}`).style.display = 'block';
@@ -355,7 +398,7 @@ function showFormunsuccess(index) {
   document.getElementById(`formContainernot${index}`).style.display = 'block';
 }
 
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
   updateStats();
   loadTasks();
 });
@@ -369,7 +412,6 @@ function submitForm(index, rowIndex) {
   }
 
   const data = {
-    action: 'updateStatus',
     status: selectedStatus,
     rowIndex: rowIndex
   };
@@ -384,8 +426,9 @@ function submitForm(index, rowIndex) {
     data.cannotFix = document.getElementById(`detailnot${index}`)?.value.trim() || "-";
     data.jobType = document.getElementById(`worktypenot${index}`)?.value.trim() || "-";
   }
+  console.log("Sending data:", data);
 
-  fetch("https://script.google.com/macros/s/AKfycby1hX-IZqJvi0Vnmf2dsnYjl2U-j_9EzrSQsdbD2kADL54EudnxXZ639FiEY-rtTYHfcw/exec", {
+  fetch("https://script.google.com/macros/s/AKfycbwtAQuDSVDBIpm3ZaK7Dg-zGoSl0jOpbS_8fdK_11Rd4uzqNX0XGZvye2gesZsNewaoBw/exec", {
     method: "POST",
     mode: "no-cors",
     body: JSON.stringify(data),
@@ -403,4 +446,84 @@ function submitForm(index, rowIndex) {
       console.error("Error:", err);
       alert("❌ ไม่สามารถเชื่อมต่อกับระบบได้");
     });
+}
+
+
+let chartInstance;
+
+function toggleChart() {
+  const chartDiv = document.getElementById("chartContainer");
+
+  if (chartDiv.style.display === "none") {
+    chartDiv.style.display = "block";
+
+    fetch(url2)
+      .then(res => res.text())
+      .then(rep => {
+        const data = JSON.parse(rep.substr(47).slice(0, -2));
+        const rows = data.table.rows;
+
+        // หาคอลัมน์ชื่อ "ประเภทงาน"
+        const colIndex = data.table.cols.findIndex(col => col.label === "ประเภทงาน");
+        if (colIndex === -1) {
+          alert("ไม่พบคอลัมน์ประเภทงาน");
+          return;
+        }
+
+        // นับจำนวนประเภทงาน
+        const typeCounts = {};
+        rows.forEach(row => {
+          const value = row.c[colIndex]?.v?.trim();
+          if (value) {
+            typeCounts[value] = (typeCounts[value] || 0) + 1;
+          }
+        });
+
+        // สร้างกราฟ
+        const labels = Object.keys(typeCounts);
+        const counts = Object.values(typeCounts);
+
+        const ctx = document.getElementById("workTypeChart").getContext("2d");
+
+        if (chartInstance) chartInstance.destroy(); // ลบกราฟเก่าหากมี
+        chartInstance = new Chart(ctx, {
+          type: 'bar',
+          data: {
+            labels: labels,
+            datasets: [{
+              label: 'ประเภทงาน',
+              data: counts,
+              backgroundColor: [
+                '#007bff', '#28a745', '#ffc107', '#dc3545', '#17a2b8',
+                '#6f42c1', '#fd7e14', '#20c997', '#6c757d', '#343a40'
+              ],
+              borderWidth: 1
+            }]
+          },
+          options: {
+            responsive: true,
+            plugins: {
+              legend: { position: 'top' },
+              title: { display: true, text: 'สถิติตามประเภทงาน' }
+            },
+            scales: {
+              y: {
+                beginAtZero: true,
+                ticks: {
+                  stepSize: 1,
+                  precision: 0 // บังคับให้เป็นเลขจำนวนเต็ม
+                }
+              }
+            }
+          }
+        });
+      })
+      .catch(err => {
+        console.error("โหลดข้อมูลประเภทงานล้มเหลว:", err);
+        alert("เกิดข้อผิดพลาดในการโหลดประเภทงาน");
+      });
+
+  } else {
+    chartDiv.style.display = "none";
+  }
 }
