@@ -54,8 +54,7 @@
 
     <div class="row justify-content-center">
 
-        <div class="col-sm-2 mb-3">
-
+        <div class="col-4">
             <div class="card" >
                 <div class="card-body">
                     <h3 class="text-center" id="totalTasks">0</h3>
@@ -64,32 +63,32 @@
             </div>
         </div>
 
-        <div class="col-sm-2 mb-3">
-            <div class="card">
+        <div class="col-4">
+            <div class="card ">
                 <div class="card-body">
                     <h3 class="text-center" id="pendingTasks">0</h3>
-                    <p class="card-text text-center">รอดำเนินการ</p>
+                    <p class="card-text text-center" >รอดำเนินการ</p>
                 </div>
             </div>
         </div>
-        <div class="col-sm-2">
+        <div class="col-4">
             <div class="card">
                 <div class="card-body">
                     <h3 class="text-center" id="doneTasks">0</h3>
-                    <p class="card-text text-center">เสร็จสิ้น</p>
+                    <p class="card-text text-center">งานเสร็จสิ้น</p>
                 </div>
             </div>
         </div> <br>
 
     </div>
     <div class="row justify-content-center">
-        <button type="button" class="btn btn-outline-dark btn-sm" style="width: 15%; padding: 10px; margin-top: 10px;" onclick="toggleChart()">ดูสถิติ</button>
+        <button type="button" class="btn btn-outline-dark btn-sm" style="width: 30%; padding: 10px; margin-top: 20px;" onclick="toggleChart()">ดูสถิติ</button>
     </div>
     <div id="chartContainer" style="display: none;">
         <canvas id="workTypeChart"></canvas>
     </div>  <br>
 
-    <div class="filter-section mb-4">
+    <div class="filter-section mb-4 mt-2">
         <div class="btn-group" role="group">
             <button type="button" class="btn btn-outline-secondary filter-btn active" id="filter-all"
                 onclick="filterTasks('all')">
