@@ -10,7 +10,7 @@ const STATUS_COL_NAME = "สถานะ";
 
 // ตัวแปรเก็บข้อมูลทั้งหมด
 let allTasksData = [];
-let currentFilter = 'all';
+let currentFilter = "all";
 
 // ฟังก์ชันอัปเดตสถิติ
 function updateStats() {
@@ -42,33 +42,35 @@ function updateStats() {
 // ฟังก์ชันฟิลเตอร์ข้อมูล
 function filterTasks(status) {
   currentFilter = status;
-  const cards = document.querySelectorAll('#card-container .col-md-4');
+  const cards = document.querySelectorAll("#card-container .col-md-4");
 
-  document.querySelectorAll('.filter-btn').forEach(btn => {
-    btn.classList.remove('active');
+  document.querySelectorAll(".filter-btn").forEach((btn) => {
+    btn.classList.remove("active");
   });
-  document.getElementById(`filter-${status}`).classList.add('active');
+  document.getElementById(`filter-${status}`).classList.add("active");
 
-  cards.forEach(card => {
-    const statusBadge = card.querySelector('.status-badge');
-    const cardStatus = statusBadge ? statusBadge.textContent.trim() : 'รอดำเนินการ';
+  cards.forEach((card) => {
+    const statusBadge = card.querySelector(".status-badge");
+    const cardStatus = statusBadge
+      ? statusBadge.textContent.trim()
+      : "รอดำเนินการ";
 
-    if (cardStatus === 'เสร็จสิ้น') {
-      statusBadge.style.backgroundColor = 'red';
-      statusBadge.style.color = 'white';
+    if (cardStatus === "เสร็จสิ้น") {
+      statusBadge.style.backgroundColor = "red";
+      statusBadge.style.color = "white";
     } else {
-      statusBadge.style.backgroundColor = '#ddd';
-      statusBadge.style.color = '#333';
+      statusBadge.style.backgroundColor = "#ddd";
+      statusBadge.style.color = "#333";
     }
 
-    if (status === 'all') {
-      card.style.display = 'block';
-    } else if (status === 'pending' && cardStatus === 'รอดำเนินการ') {
-      card.style.display = 'block';
-    } else if (status === 'done' && cardStatus === 'เสร็จสิ้น') {
-      card.style.display = 'block';
+    if (status === "all") {
+      card.style.display = "block";
+    } else if (status === "pending" && cardStatus === "รอดำเนินการ") {
+      card.style.display = "block";
+    } else if (status === "done" && cardStatus === "เสร็จสิ้น") {
+      card.style.display = "block";
     } else {
-      card.style.display = 'none';
+      card.style.display = "none";
     }
   });
 }
@@ -120,54 +122,68 @@ function generatePDF(rowData, index) {
 
   // ดึงข้อมูลจาก rowData
   const [
-    timestampRaw, building, floor, department, contact,
-    issue, imgURL, status, detail, equipment, cannotFix, jobType, sequence
+    timestampRaw,
+    building,
+    floor,
+    department,
+    contact,
+    issue,
+    imgURL,
+    status,
+    detail,
+    equipment,
+    cannotFix,
+    jobType,
+    sequence,
   ] = rowData.c.map((cell) => (cell ? cell.v : ""));
 
-  const timestamp = typeof timestampRaw === "string" && timestampRaw.includes("Date(")
-    ? parseGoogleDateString(timestampRaw)
-    : new Date(timestampRaw);
+  const timestamp =
+    typeof timestampRaw === "string" && timestampRaw.includes("Date(")
+      ? parseGoogleDateString(timestampRaw)
+      : new Date(timestampRaw);
 
   const { date, time } = formatThaiDateTime(timestamp);
 
   const data = {
     date: date,
-    time: time.replace(' น.', ''),
-    building: building || '-',
-    floor: floor || '-',
-    department: department || '-',
-    contact: contact || '-',
-    issue: issue || '-',
-    detail: detail || '-',
-    equipment: equipment || '-',
-    cannotFix: cannotFix || '-',
-    jobType: jobType || '-',
-    sequence: sequence || index + 1
+    time: time.replace(" น.", ""),
+    building: building || "-",
+    floor: floor || "-",
+    department: department || "-",
+    contact: contact || "-",
+    issue: issue || "-",
+    detail: detail || "-",
+    equipment: equipment || "-",
+    cannotFix: cannotFix || "-",
+    jobType: jobType || "-",
+    sequence: sequence || index + 1,
   };
 
   // ใช้ JSONP แทน fetch
-  const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwJkJuQCiM-ofuh_KYkCC7Espw7vksWNKUhvma06w_ocPLjDkcA_7ZAsLum0aSRwK957Q/exec';
+  const SCRIPT_URL =
+    "https://script.google.com/macros/s/AKfycbwJkJuQCiM-ofuh_KYkCC7Espw7vksWNKUhvma06w_ocPLjDkcA_7ZAsLum0aSRwK957Q/exec";
 
   sendDataWithJSONP(SCRIPT_URL, data)
-    .then(result => {
+    .then((result) => {
       if (result.success) {
-        alert(`✅ สร้าง PDF เรียบร้อย!\nเลขที่เอกสาร: ${result.documentNumber}`);
+        alert(
+          `✅ สร้าง PDF เรียบร้อย!\nเลขที่เอกสาร: ${result.documentNumber}`
+        );
 
         // ดาวน์โหลดไฟล์
-        const link = document.createElement('a');
+        const link = document.createElement("a");
         link.href = result.downloadUrl;
         link.download = `ใบแจ้งซ่อม_${result.documentNumber}_${building}_${floor}.pdf`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-
       } else {
-        alert('❌ เกิดข้อผิดพลาดในการสร้าง PDF: ' + result.error);
+        alert("❌ เกิดข้อผิดพลาดในการสร้าง PDF: " + result.error);
       }
     })
-    .catch(error => {
-      console.error('Error:', error);
-      alert('❌ เกิดข้อผิดพลาดในการเชื่อมต่อ: ' + error.message);
+    .catch((error) => {
+      console.error("Error:", error);
+      alert("❌ เกิดข้อผิดพลาดในการเชื่อมต่อ: " + error.message);
     })
     .finally(() => {
       button.innerHTML = originalText;
@@ -178,7 +194,7 @@ function generatePDF(rowData, index) {
 // ฟังก์ชันสำหรับ JSONP
 function sendDataWithJSONP(url, data) {
   return new Promise((resolve, reject) => {
-    const callbackName = 'jsonp_callback_' + Math.round(100000 * Math.random());
+    const callbackName = "jsonp_callback_" + Math.round(100000 * Math.random());
 
     // สร้าง callback function
     window[callbackName] = function (response) {
@@ -188,16 +204,16 @@ function sendDataWithJSONP(url, data) {
     };
 
     // สร้าง script element
-    const script = document.createElement('script');
+    const script = document.createElement("script");
     const params = new URLSearchParams();
-    params.append('callback', callbackName);
-    params.append('data', JSON.stringify(data));
+    params.append("callback", callbackName);
+    params.append("data", JSON.stringify(data));
 
-    script.src = url + '?' + params.toString();
+    script.src = url + "?" + params.toString();
     script.onerror = function () {
       delete window[callbackName];
       document.body.removeChild(script);
-      reject(new Error('JSONP request failed'));
+      reject(new Error("JSONP request failed"));
     };
 
     document.body.appendChild(script);
@@ -207,12 +223,11 @@ function sendDataWithJSONP(url, data) {
       if (window[callbackName]) {
         delete window[callbackName];
         document.body.removeChild(script);
-        reject(new Error('JSONP request timeout'));
+        reject(new Error("JSONP request timeout"));
       }
     }, 30000);
   });
 }
-
 
 // ฟังก์ชันโหลดข้อมูลและสร้างการ์ด
 function loadTasks() {
@@ -229,9 +244,7 @@ function loadTasks() {
       }
 
       allTasksData = rows;
-      container.innerHTML = '';
-      
-
+      container.innerHTML = "";
       allTasksData = rows;
 
       rows.sort((a, b) => {
@@ -244,7 +257,6 @@ function loadTasks() {
         };
         return getDate(b) - getDate(a);
       });
-
       rows.forEach((row, index) => {
         const [
           timestampRaw,
@@ -258,9 +270,10 @@ function loadTasks() {
         ] = row.c.map((cell) => (cell ? cell.v : ""));
 
         const displayStatus = status ? status : "รอดำเนินการ";
-        const timestamp = typeof timestampRaw === "string" && timestampRaw.includes("Date(")
-          ? parseGoogleDateString(timestampRaw)
-          : new Date(timestampRaw);
+        const timestamp =
+          typeof timestampRaw === "string" && timestampRaw.includes("Date(")
+            ? parseGoogleDateString(timestampRaw)
+            : new Date(timestampRaw);
 
         const { date, time } = formatThaiDateTime(timestamp);
 
@@ -285,11 +298,12 @@ function loadTasks() {
         const rowIndex = index + 2;
 
         // กำหนดปุ่มตามสถานะ
-        const buttonHTML = displayStatus === "เสร็จสิ้น"
-          ? `<button type="button" class="btn btn-success" onclick="generatePDF(allTasksData[${index}], ${index})">
+        const buttonHTML =
+          displayStatus === "เสร็จสิ้น"
+            ? `<button type="button" class="btn btn-success" onclick="generatePDF(allTasksData[${index}], ${index})">
                <i class="fas fa-download"></i> โหลด PDF
              </button>`
-          : `<button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#${modalId}">
+            : `<button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#${modalId}">
                รับงาน
              </button>`;
 
@@ -311,7 +325,9 @@ function loadTasks() {
 
                         ${buttonHTML}
 
-                        ${displayStatus !== "เสร็จสิ้น" ? `
+                        ${
+                          displayStatus !== "เสร็จสิ้น"
+                            ? `
                         <div class="modal fade" id="${modalId}" tabindex="-1" aria-labelledby="${modalId}Label" aria-hidden="true">
                             <div class="modal-dialog">
                                 <div class="modal-content">
@@ -335,10 +351,10 @@ function loadTasks() {
                                     <div class="from">
                                         <div class="form">
                                             <form action="">
-                                                ผลการซ่อม :
+                                                ผลการซ่อม : <br>
                                                 <input type="radio" id="doneRadio${index}" name="status${index}" value="done"
-                                                    onclick="showFormsuccess(${index})" />
-                                                <label for="doneRadio${index}">ดำเนินการเสร็จเรียบร้อย</label>
+                                                    onclick="showFormsuccess(${index})" /> 
+                                                <label for="doneRadio${index}">ดำเนินการเสร็จเรียบร้อย</label> <br>
 
                                                 <input type="radio" id="notdoneRadio${index}" name="status${index}" value="notdone"
                                                     onclick="showFormunsuccess(${index})" />
@@ -370,41 +386,46 @@ function loadTasks() {
                                 </div>
                             </div>
                         </div>
-                        ` : ''}
+                        `
+                            : ""
+                        }
                     </div>
                 </div>
             </div>`;
         container.innerHTML += card;
       });
 
-      if (currentFilter !== 'all') {
+      if (currentFilter !== "all") {
         filterTasks(currentFilter);
       }
     })
     .catch((err) => {
       console.error("เกิดข้อผิดพลาด:", err);
-      document.getElementById("card-container").innerHTML = "<p>โหลดข้อมูลไม่สำเร็จ</p>";
+      document.getElementById("card-container").innerHTML =
+        "<p>โหลดข้อมูลไม่สำเร็จ</p>";
     });
 }
 
-
+// ฟังก์ชันอื่นๆ ยังคงเหมือนเดิม
 function showFormsuccess(index) {
-  document.getElementById(`formContainernot${index}`).style.display = 'none';
-  document.getElementById(`formContainer${index}`).style.display = 'block';
+  document.getElementById(`formContainernot${index}`).style.display = "none";
+  document.getElementById(`formContainer${index}`).style.display = "block";
 }
 
 function showFormunsuccess(index) {
-  document.getElementById(`formContainer${index}`).style.display = 'none';
-  document.getElementById(`formContainernot${index}`).style.display = 'block';
+  document.getElementById(`formContainer${index}`).style.display = "none";
+  document.getElementById(`formContainernot${index}`).style.display = "block";
 }
 
-document.addEventListener('DOMContentLoaded', function () {
+document.addEventListener("DOMContentLoaded", function () {
   updateStats();
   loadTasks();
 });
 
 function submitForm(index, rowIndex) {
-  const selectedStatus = document.querySelector(`input[name="status${index}"]:checked`)?.value;
+  const selectedStatus = document.querySelector(
+    `input[name="status${index}"]:checked`
+  )?.value;
 
   if (!selectedStatus) {
     alert("กรุณาเลือกผลการซ่อม");
@@ -413,41 +434,50 @@ function submitForm(index, rowIndex) {
 
   const data = {
     status: selectedStatus,
-    rowIndex: rowIndex
+    rowIndex: rowIndex,
   };
 
   if (selectedStatus === "done") {
-    data.detail = document.getElementById(`detail${index}`)?.value.trim() || "-";
-    data.equipment = document.getElementById(`equipment${index}`)?.value.trim() || "-";
-    data.jobType = document.getElementById(`worktype${index}`)?.value.trim() || "-";
+    data.detail =
+      document.getElementById(`detail${index}`)?.value.trim() || "-";
+    data.equipment =
+      document.getElementById(`equipment${index}`)?.value.trim() || "-";
+    data.jobType =
+      document.getElementById(`worktype${index}`)?.value.trim() || "-";
   } else if (selectedStatus === "notdone") {
     data.detail = "-";
     data.equipment = "-";
-    data.cannotFix = document.getElementById(`detailnot${index}`)?.value.trim() || "-";
-    data.jobType = document.getElementById(`worktypenot${index}`)?.value.trim() || "-";
+    data.cannotFix =
+      document.getElementById(`detailnot${index}`)?.value.trim() || "-";
+    data.jobType =
+      document.getElementById(`worktypenot${index}`)?.value.trim() || "-";
   }
   console.log("Sending data:", data);
 
-  fetch("https://script.google.com/macros/s/AKfycbwtAQuDSVDBIpm3ZaK7Dg-zGoSl0jOpbS_8fdK_11Rd4uzqNX0XGZvye2gesZsNewaoBw/exec", {
-    method: "POST",
-    mode: "no-cors",
-    body: JSON.stringify(data),
-    headers: {
-      "Content-Type": "application/json"
+  fetch(
+    "https://script.google.com/macros/s/AKfycbwtAQuDSVDBIpm3ZaK7Dg-zGoSl0jOpbS_8fdK_11Rd4uzqNX0XGZvye2gesZsNewaoBw/exec",
+    {
+      method: "POST",
+      mode: "no-cors",
+      body: JSON.stringify(data),
+      headers: {
+        "Content-Type": "application/json",
+      },
     }
-  })
+  )
     .then(() => {
       alert("✅ บันทึกข้อมูลเรียบร้อย");
-      const modal = bootstrap.Modal.getInstance(document.getElementById(`modal${index}`));
+      const modal = bootstrap.Modal.getInstance(
+        document.getElementById(`modal${index}`)
+      );
       if (modal) modal.hide();
       location.reload();
     })
-    .catch(err => {
+    .catch((err) => {
       console.error("Error:", err);
       alert("❌ ไม่สามารถเชื่อมต่อกับระบบได้");
     });
 }
-
 
 let chartInstance;
 
@@ -458,13 +488,15 @@ function toggleChart() {
     chartDiv.style.display = "block";
 
     fetch(url2)
-      .then(res => res.text())
-      .then(rep => {
+      .then((res) => res.text())
+      .then((rep) => {
         const data = JSON.parse(rep.substr(47).slice(0, -2));
         const rows = data.table.rows;
 
         // หาคอลัมน์ชื่อ "ประเภทงาน"
-        const colIndex = data.table.cols.findIndex(col => col.label === "ประเภทงาน");
+        const colIndex = data.table.cols.findIndex(
+          (col) => col.label === "ประเภทงาน"
+        );
         if (colIndex === -1) {
           alert("ไม่พบคอลัมน์ประเภทงาน");
           return;
@@ -472,7 +504,7 @@ function toggleChart() {
 
         // นับจำนวนประเภทงาน
         const typeCounts = {};
-        rows.forEach(row => {
+        rows.forEach((row) => {
           const value = row.c[colIndex]?.v?.trim();
           if (value) {
             typeCounts[value] = (typeCounts[value] || 0) + 1;
@@ -487,42 +519,51 @@ function toggleChart() {
 
         if (chartInstance) chartInstance.destroy(); // ลบกราฟเก่าหากมี
         chartInstance = new Chart(ctx, {
-          type: 'bar',
+          type: "bar",
           data: {
             labels: labels,
-            datasets: [{
-              label: 'ประเภทงาน',
-              data: counts,
-              backgroundColor: [
-                '#007bff', '#28a745', '#ffc107', '#dc3545', '#17a2b8',
-                '#6f42c1', '#fd7e14', '#20c997', '#6c757d', '#343a40'
-              ],
-              borderWidth: 1
-            }]
+            datasets: [
+              {
+                label: "ประเภทงาน",
+                data: counts,
+                backgroundColor: [
+                  "#007bff",
+                  "#28a745",
+                  "#ffc107",
+                  "#dc3545",
+                  "#17a2b8",
+                  "#6f42c1",
+                  "#fd7e14",
+                  "#20c997",
+                  "#6c757d",
+                  "#343a40",
+                ],
+                borderWidth: 1,
+              },
+            ],
           },
           options: {
             responsive: true,
             plugins: {
-              legend: { position: 'top' },
-              title: { display: true, text: 'สถิติตามประเภทงาน' }
+              legend: { position: "top" },
+              title: { display: true, text: "สถิติตามประเภทงาน" },
             },
             scales: {
               y: {
                 beginAtZero: true,
                 ticks: {
                   stepSize: 1,
-                  precision: 0 // บังคับให้เป็นเลขจำนวนเต็ม
-                }
-              }
-            }
-          }
+                  precision: 0, // บังคับให้เป็นเลขจำนวนเต็ม
+                },
+              },
+            },
+          },
         });
       })
-      .catch(err => {
+      .catch((err) => {
         console.error("โหลดข้อมูลประเภทงานล้มเหลว:", err);
         alert("เกิดข้อผิดพลาดในการโหลดประเภทงาน");
       });
-
   } else {
     chartDiv.style.display = "none";
   }
